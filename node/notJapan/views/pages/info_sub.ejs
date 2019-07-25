@@ -1,0 +1,108 @@
+<div class="content-wrapper">
+    <!-- 현 페이지의 주제, path-->
+    <section class="content-header">
+        <h1>
+            Dashboard
+            <small>Control panel</small>
+        </h1>
+        <ol class="breadcrumb">
+            <li><a href="#"><i class="fa fa-dashboard"></i> Home</a></li>
+            <li class="active">Dashboard</li>
+        </ol>
+    </section>
+    <section class="content">
+        <%= row.name%>
+        <!-- 컬럼이 2개 : 앞에는 컬럼명, 두번째는 값 형태로 표를 재구성하시오 -->
+        <!-- for문을 이용하여 알아서 처리되게 수정 -->
+        <!-- 미리보기 화면이면 -->
+        <% if(!update){ %>
+            <a href='?u=1'> 수정하기 화면으로 진입</a>
+        <% } %>
+        <table border="1" width='100%'>
+            <thead>
+                <tr>
+                    <th>항목</th>
+                    <th>값</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% for( key in row ) {%>
+                    <tr>
+                            <td><%= key %></td>
+                            <% if(update){  %>
+                                <!-- update가 참이면 수정할 수 있는 화면으로 진입-->
+                                <td><input type="text" value = '<%= row[key] %>' name='<%= key %>' 
+                                    <%= key!='hash' ? 'disabled' : '' %> /> </td>
+                            <% }else{ %>
+                                <td><%= row[key] %></td>
+                            <% }      %>
+                        </tr>
+                <% } %> 
+            </tbody>
+        </table>
+
+
+            <div class="row">
+            <!-- 컬럼의 총합은 12, 구분은 col-lg-수치 -->
+            <div class="col-lg-3 col-xs-6">
+                <div class="small-box bg-aqua">
+                    <div class="inner">
+                        <h3>150</h3>
+
+                        <p>New Orders</p>
+                    </div>
+                    <div class="icon">
+                        <i class="ion ion-bag"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+            <!-- ./col -->
+            <div class="col-lg-3 col-xs-6">
+                <!-- small box -->
+                <div class="small-box bg-green">
+                    <div class="inner">
+                        <h3>53<sup style="font-size: 20px">%</sup></h3>
+
+                        <p>Bounce Rate</p>
+                    </div>
+                    <div class="icon">
+                        <i class="ion ion-stats-bars"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+            <!-- ./col -->
+            <div class="col-lg-3 col-xs-6">
+                <!-- small box -->
+                <div class="small-box bg-yellow">
+                    <div class="inner">
+                        <h3>44</h3>
+
+                        <p>User Registrations</p>
+                    </div>
+                    <div class="icon">
+                        <i class="ion ion-person-add"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+            <!-- ./col -->
+            <div class="col-lg-3 col-xs-6">
+                <!-- small box -->
+                <div class="small-box bg-red">
+                    <div class="inner">
+                        <h3>65</h3>
+
+                        <p>Unique Visitors</p>
+                    </div>
+                    <div class="icon">
+                        <i class="ion ion-pie-graph"></i>
+                    </div>
+                    <a href="#" class="small-box-footer">More info <i class="fa fa-arrow-circle-right"></i></a>
+                </div>
+            </div>
+            <!-- ./col -->
+        </div>
+    </section>
+</div>

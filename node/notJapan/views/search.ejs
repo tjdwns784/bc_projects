@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <%- include mod/head.ejs %>
+</head>
+<body class="hold-transition skin-blue sidebar-mini">
+    <div class="wrapper">
+    <%- include mod/main_header.ejs %>
+    <%- include mod/main_sidebar.ejs %>
+    <%- include pages/search_sub.ejs %>
+    <%- include mod/copyright.ejs %>
+    <!-- 우측 사이드바 -->
+    <%- include mod/config.ejs %>
+    <div class="control-sidebar-bg"></div>
+  </div>
+  <!-- ./wrapper -->
+  <% include mod/foot.ejs %>
+  <script>
+   // 1. 검색 버튼 누르면 submit 이벤트가 발생하는데, 이 이벤트를 인터셉트한다.
+   //   $('css selector') <- JQuery의 요소 찾는 방법
+   $('form').on('submit', (evt)=>{
+     // evt : 이벤트 객체
+     // submit 이벤트의 무효화 -> form 전송을 안한다.
+    evt.preventDefault()
+    console.log('이벤트는 인터셉트했고, 폼전송은 무효화 했다.')
+    // 2. ajax 통신을 진행하여 검색 쿼리를 수행하고, 결과를 돌려 받는다 ~/search, post방식
+    // 데이터를 서버로 전송해서 결과를 받는 과정에 화면이 갱신되는 부분이 존재하는데,
+    // ajax를 ㅜ행하면 비동기 백그라운드로 통신을 진행하여, 화면이 리로드되는 증상이 없고,
+    // 바로 결과를 확인할 수 있는 기술 => 초기에는 xml이 데이터를 주고받는 형식이라면, 현재는
+    // json을 주된 형식으로 사용한다. 동일 도메인에서만 사용 가능하다!
+    $.ajax({
+      url  :'/search2',
+      data:$('form').serialize(), // keyword=???
+      dataType:'json',   // 응답 데이터의 포맷
+      type:'get',
+      success:(data)=>{
+        console.log(data)
+        // 3. 디비 쿼리 수행, 검색어 넣어서 수행하는 쿼리 결과는 => json으로 응답
+        resultShow(data)
+      },
+      error:(err)=>{
+        console.log(err)
+      }
+    })
+    
+    return false
+   })
+  
+   
+   // data:검색결과로 받은 객체 => [ {}, {}, {}, ...]
+   function resultShow(data) {
+     // 기존 검색 결과 삭제
+     $('#results').empty()
+     // value => val
+     // 검색어 획득
+     let word = $('[name=keyword]').val()
+     // 검색창을 찾아서 비운다
+     $('[name=keyword]').val('')
+     // body > div.wrapper > div.content-wrapper > section.content > div:nth-child(1) > div > div > form > input[type=text]:nth-child(1)
+     $.each(data, (idx, item)=>{
+       // 4. json 결과를 파싱하여 id가 results인 요소에 <div>유니클로</div>로 나열하겠다.
+       let tmp = `<li style='margin:1em;'>${item.name}, ${item.chgName}, ${item.hash} </li>`
+       // 문서내에서 id값이 result인 요소를 찾아서 추가한다.
+       $('#results').append(tmp.replace(word, `<b style='color:red;'>${word}</b>`))
+       console.log(tmp)
+       // 5. 결과 중 유니클로(예를 들면)를 클릭하면 ~/info/제품번호 로 호출되어서, 제품 상세정보화면으로 이동한다.
+       // 방금 추가된 요소
+       $('#results > li:last').on('click', ()=>{
+        //alert(item.name)
+        document.location.href='/info/' + item.no
+       })
+    })
+  }
+  
+  </script>
+</body>
+</html>

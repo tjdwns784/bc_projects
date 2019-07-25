@@ -1,0 +1,56 @@
+<div class="content-wrapper">
+    <!-- 현 페이지의 주제, path -->
+    <section class="content-header">
+        <h1>
+            불매 목록
+            <small>경제왜란</small>
+        </h1>
+        <ol class="breadcrumb">
+            <li><a href="/"><i class="fa fa-dashboard"></i> Home</a></li>
+            <li class="active">검색</li>
+        </ol>
+    </section>
+
+    <!-- Main content -->
+    <section class="content">
+
+        <div class="row">
+            <!-- 컬럼의 총합은 12, 구분은 col-lg-수치 -->
+            <div class="col-lg-12 col-xs-12">
+                <!-- small box -->
+                <div class="small-box bg-aqua">
+                    <form>
+                        <input style='color: black;' type="text" name='keyword' placeholder="찾고 싶은 상품" autofocus />
+                        <input style='color: black;' type='submit' value='검색' />
+                    </form>
+                    <div id='results'></div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- 데이터 1개당 아래 코드가 반복된다 -->
+            <% for( row of rows ){ %>
+            <div class="col-lg-3 col-xs-6">
+                <!-- small box -->
+                <!-- <% if( row.cate == '금융' ){ %>
+                <div class="small-box bg-yellow">
+                    <% }else{ %>
+                    <div class="small-box bg-aqua">
+                        <% } %> -->
+                        <div class="small-box <%= row.cate =='금융' ? 'bg-yellow' : 'bg-aqua' %>">
+                        <div class="inner">
+                            <h3><%= row.cate %></h3>
+                            <p><%= row.name %></p>
+                            <p><%= row.chgName %></p>
+                        </div>
+                        <div class="icon">
+                            <i class="ion ion-bag"></i>
+                        </div>
+                        <a href="#" class="small-box-footer"><%= row.hash %> <i
+                                class="fa fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+                <% } %>
+            </div>
+    </section>
+</div>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title><%= title %></title>
+  <link rel='stylesheet' href='/stylesheets/style.css' />
+</head>
+<body>
+  <h1><%= title %></h1>
+  <fieldset>
+    <!-- 클라이언트가 서버로 데이터를 보내는 방식, from, ajax -->
+    <!-- action :  데이터가 전송될 주소 : 안쓰면 현재 주소, 데이터가 전달되는 방식 : 안쓰면 get 방식 -->
+    <form method = "POST">
+    <input type='text' placeholder="아이디" name="uid">
+    <input type='password' placeholder="비밀번호" name="upw" />
+    <input type='submit' value="로그인" />
+  </form>
+  </fieldset>
+</body>
+</html>
