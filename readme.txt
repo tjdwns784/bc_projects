@@ -228,3 +228,10 @@ Private
 $ git clone https://ID:PW@github.com/계정이름/bc_projects.git
 - 폴더 옵션에서 숨김 파일 보기를 하면 .git 폴더를 확인할 수 있다.
 - vs code를 오픈하고, bc_projects을 오픈한다.
+- 원소스를 폴더채 신규 위치에 복사 혹은 이동시킴
+- 완료 후 vs code를 보면 파일 변화를 감지하게 되고 node_modules를 제외한 나머지가 잡히면 OK
+- 커밋 메시지를 작성 및 커밋 체크 클릭
+ -------------------------------------------------------------
+      현 프로젝트 공간에서 사용자 등록이 안되면 실패 1회만
+      $ git config --global user.name "계정이름"
+      $ git config --global user.email "계정이메일"
