@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title><%= title %></title>
+  <link rel='stylesheet' href='/stylesheets/style.css' />
+  <script src='/lib/bignumber.min.js'></script>
+  <script src='/lib/web3-light.min.js'></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script>
+    // 1. 웹에서 이더리움 네트워크를 연결하는 모듈 web3 생성
+    let Web3 = require('web3')
+    const web3 = new Web3()
+    web3.setProvider(new web3.providers.HttpProvider('http://localhost:8123'))
+    let totalETH = 0
+
+
+    function getAccounts() {
+      // 네트워크상 계좌 확인
+      totalETH = 0
+      $('#accountList').empty()
+      $.each(web3.eth.accounts, (idx, addr) => {
+        //계좌별 잔고 확인
+        let coin = web3.fromWei(web3.eth.getBalance(addr), 'ether')
+        totalETH += parseFloat(coin)
+        let html = `<option value='${addr}'>${`Account-${(idx + 1)}:${coin} ETH`}</option>`
+        $('#accountList').append(html)
+      })
+      // 총액 표시
+      $('h2>span').html(` 총액${totalETH} ETH`)
+
+      // 계좌를 선택하면
+      $('#accountList').on('change', (evt) => {
+        console.log($('#accountList').val())
+        $('#curAccount').html(`현재 선택한 계좌 ${$('#accountList').val()}`)
+      })
+    }
+    // 화면에 보이기 직전에 호출됨 : jQuery상에서 문서가 로드되면 호출(화면에 보이기직전)
+    $(document).ready(() => {
+      // 계좌 정보 가져오기
+      getAccounts()
+      // 송금 버튼에 이벤트 등록
+      $('#sendTransac').on('click', () => {
+        // 송금에 필요한 데이터 획득
+        let fromHash = $('[name=send]').val()
+        let toHash = $('[name=recv]').val()
+        let fromPwd = $('[name=pwd]').val()
+        let amount = web3.toWei( $('[name=amount]').val(), 'ether')
+        // 송금
+        // 1. 계좌 연락
+        try{
+          if(web3.personal.unlockAccount( fromHash, fromPwd )){
+            // 2. 송금 트렌젝션 수행
+            web3.eth.sendTransaction({
+              from:fromHash,
+              to:toHash,
+              value:amount
+            }, (err, result)=>{
+              if( err ){
+                alert('송금 실패')
+                console.log( err )
+              }else{
+                alert('송금 성공' + result)
+              }
+            })
+            // 3. 펜딩을 통한 트렌젝션 조회 -> 마이너를 통한 트렌젝션 처리(네트워크 진행해야함.)
+            // 4. 펜딩의 결고로 해당 트렌젝션이 조회되지 않으면 -> 처리완료
+          }
+        }catch{
+          alert( '비밀번호 확인' );
+        }
+      })
+      // 트렌젝션 확인
+      setInterval( ()=>{
+        // console.log( web3.eth.pendingTransactions() )
+        // 채굴이 진행되서 혹은 송금행위 트렌젝션등의 작업에 의해 계좌별 금액이 변경되면
+        // 이것을 감지해서 다시 긁어온다.
+        web3.eth.filter('latest').watch(( e, v )=>{
+          // console.log( e, v )
+          getAccounts()
+        })
+      }, 1000*1 )
+    })
+  </script>
+</head>
+
+<body>
+  <div id='wrap'>
+    <h2>이더리움 MINI-Wallet<span></span></h2>
+    <!-- 계좌 목록 이름 : account-1, account-2, 잔액:xxxxether, 주소:0xacsacs -->
+    <label>계좌 리스트</label>
+    <select id='accountList'></select>
+    <p><span id='curAccount'></span></p>
+    <fieldset>
+      <label>보내는 이</label>
+      <input type="text" placeholder="보내는 계좌 주소:from" name='send' /><br />
+      <label>받는 계좌</label>
+      <input type="text" placeholder="송금받는 계좌 주소:to" name='recv' /><br />
+      <label>보내는 계좌 비밀번호</label>
+      <input type="password" placeholder="보내는 계좌 비밀번호" name='pwd' /><br />
+      <label>송금액</label>
+      <input type="number" placeholder="송금액:ETH를 기입하면 wei로환산" name='amount' /><br />
+      <button id='sendTransac'>송금진행</button>
+    </fieldset>
+  </div>
+</body>
+
+</html>
