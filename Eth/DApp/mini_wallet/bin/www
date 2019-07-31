@@ -20,6 +20,35 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
+// 사설 네트워크 구성
+const web3 = require('web3')
+const rpc = new web3(new web3.providers.HttpProvider('http://localhost:8123'))
+// 서버 소켓 생성
+const io = require('socket.io')(server)
+io.on('connection', (socket) => {
+  console.log('클라이언트가 접속하였다')
+  //클라이언트가 접속하면 모든 계좌리스트를 보낸다(admin의 맥락)
+  //실제 서비스라면 해당 클라이언트에 해당되는 계좌만 보낸다
+  socket.on('s_send_allAccounts', () => {
+    // 계좌 정보 획득 및 잔액 조회 후  응답 데이터 구성
+    console.log('계좌 정보 요청이 들어왔다')
+    let results = []
+    let accounts = rpc.eth.accounts
+    for (idx in accounts) {
+      let name = 'Account-' + (idx + 1)
+      let id = accounts[idx]
+      let coin = rpc.fromWei(rpc.eth.getBalance(id), 'ether')
+      let tmp = {
+        name: name,
+        id: id,
+        coin: coin
+      }
+      // 응답 데이터 그릇에 추가
+      results.push(tmp)
+    }
+    socket.emit('c_send_allAccounts', results)
+  })
+})
 
 /**
  * Listen on provided port, on all network interfaces.

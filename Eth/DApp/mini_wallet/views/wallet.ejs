@@ -1,11 +1,55 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    </head>
-    <body>
-       <div>
-           <h2>Rest API를 이용한 전자지갑</h2>
-       </div>
-    </body>
+
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+</head>
+
+<body>
+    <div>
+        <h2>Rest API를 이용한 전자지갑<span></span></h2>
+        <label>계좌 리스트</label>
+        <select id='accountList'></select>
+        <p><span id ='curAccount'></span></p>
+        <script>
+            // DOM 조작 : 화면의 특정 요소를 조작한다.(동적 변경..),
+            // 위치를 잡을때는 대전제 => 대상(요소:element)이 메모리에 로드되고 나서!!
+            // 계좌 리스트를 받아와서 select에 option으로 세팅
+            // ajax를 이용하여 통신
+            $.get({
+                url: '/rpc/acListEx',
+                dataType: 'json',
+                success: (data) => {
+                    console.log(data)
+                    showAccounts(data) // select 내부 구성
+                },
+                error: (err) => {
+                    alert('계좌를 불러오기 실패' + err)
+                }
+            })
+            // select 내부 동적 구성 함수
+            function showAccounts(data) {
+                // 네트워크상 계좌 확인
+                let totalETH = 0 // 계좌 총액
+                $('#accountList').empty() // 기존 계좌 리스트 초기화
+                $.each(data, (idx, account) => {
+                    //계좌별 잔고 확인
+                    let coin = parseFloat(account.coin)
+                    totalETH += coin
+                    let html = `<option value='${account.id}'>${`${account.name}:${coin} ETH`}</option>`
+                    $('#accountList').append(html)
+                })
+                // 총액 표시
+                $('h2>span').html(` 총액${totalETH} ETH`)
+
+                // 계좌를 선택하면
+                $('#accountList').on('change', (evt) => {
+                    console.log($('#accountList').val())
+                    $('#curAccount').html(`현재 선택한 계좌 ${$('#accountList').val()}`)
+                })
+            }
+        </script>
+    </div>
+</body>
+
 </html>
