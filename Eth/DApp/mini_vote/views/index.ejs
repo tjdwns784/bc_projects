@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title><%= title %></title>
+  <link rel='stylesheet' href='/stylesheets/style.css' />
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src='/socket.io/socket.io.js'></script>
+</head>
+
+<body>
+  <div>
+    <h2>블록체인기반 전자투표</h2>
+    <fieldset>
+      <p><b>항공사 등록하기</b></p>
+      <select name='account' id='account'></select>
+      <input type='text' placeholder="항공사명" name='flightName' />
+      <input type='password' placeholder="후보 등록을 위한 트렌젝션 발생에 필요한 gas 지급" name='pwd' />
+      <button onclick='onRegi();'>등록</button>
+    </fieldset>
+    <br>
+    <fieldset>
+      <h4>우수 항공사 명단 및 득표수</h4>
+      <ul id='list'></ul>
+    </fieldset>
+    <br>
+    <fieldset>
+      <h4>투표하기</h4>
+      <input type='text' placeholder="투표자 계정" id='voteAccount' />
+      <input type='text' placeholder="항공사명" name='voteTarget' />
+      <button onclick='onVote();'>투표</button>
+    </fieldset>
+  </div>
+  <script>
+    // 1. 서버 소켓 접속
+    const socket = io.connect('http://localhost:3000')
+    socket.on('connect', (err) => {
+      if (typeof err === 'undefined') {
+        socket.emit('s_send_allAccounts')
+      }
+    })
+    // 계좌 정보를 받았다
+    socket.on('c_send_allAccounts', (accounts) => {
+      $.each(accounts, (idx, account) => {
+        let html = `<option value = '${account.id}|${account.coin}'>
+                      ${account.name}:${account.coin}</option>`
+        $('#account').append(html)
+      })
+      //메시지 수신
+      socket.on('c_send_error', (msg) => {
+        alert(msg)
+      })
+    })
+    //후보자 수 및 명단, 득표수등을 호출
+    setInterval(() => {
+      socket.emit('s_send_candidateInfo')
+    }, 1000 * 3)
+    socket.on('c_send_candidateInfo',(infos)=>{
+      $('#list').empty()
+      $.each(infos,(idx,info)=>{
+        let html = `<li>${info.name} : ${info.score}표 획득</li>`
+        $('#list').append(html)
+        // 항공사명을 클릭하면 투표할 항공사명 항목에 자동삽입
+        $('#list>li:last').on('click', ()=>{
+          $('[name=voteTarget]').val(info.name)
+        })
+      })
+    })
+
+    //계좌 선택시 잔액 저장 => 사실상 의미 없다(option의 value값 구조를 변경함으로해서)
+    //없어도 되는 코드가 되었음
+    $('#account').on('change', () => {
+      // 계좌 목록 중 하나를 선택하면, 투표 쪽 계좌 항목에 값이 자동으로 삽입된다.
+      $('#voteAccount').val($('#account').val())
+    })
+
+
+    function onVote() {
+      let [account] = $('#voteAccount').val().split('|')
+      let candidate = $('[name=voteTarget]').val()
+      // 투표를 서버로 전송
+      // 왜 비번을 받지 않았는가? => 실제 투표에서는 받아서 개인 인증을 철저히 하는게 맞다.
+      // 비번이 없다 => 계좌를 안푼다 => gas지급 안한다 => 트렌젝션 아니다 => 왜
+      // 상태 변수를 수정하는 것은 맞으나? 공간을 추가하는 개념이 아닌 이미 잡힌 공간에
+      // 값을 변경만 하므로, 관계 없다.
+      socket.emit('s_send_vote', account, candidate)
+    }
+
+
+    function onRegi() {
+      let name = $('[name=flightName]').val()
+      let pwd = $('[name=pwd]').val()
+      let [account, coin] = $('#account').val().split('|')
+
+
+      console.log('계좌:', account)
+      console.log('잔고:', coin)
+      console.log('후보명:', name)
+      console.log('비밀번호:', pwd)
+
+
+
+      // 서버쪽으로 이벤트 발송
+      // 계좌, 비번, 후보자명
+      socket.emit('s_send_addCandidate', account, coin, name, pwd)
+    }
+  </script>
+</body>
+
+</html>

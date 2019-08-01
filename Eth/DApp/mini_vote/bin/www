@@ -1,0 +1,206 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('mini-vote:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+// 사설 네트워크 구성
+const web3 = require('web3')
+const rpc = new web3(new web3.providers.HttpProvider('http://localhost:8123'))
+//컨트렉트 연결
+const conInterface = [{ "constant": true, "inputs": [{ "name": "id", "type": "uint8" }], "name": "getCandidateName", "outputs": [{ "name": "", "type": "string", "value": "" }], "payable": false, "stateMutability": "view", "type": "function", "signature": "0x41ccb260" }, { "constant": false, "inputs": [{ "name": "name", "type": "string" }], "name": "addCandidate", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function", "signature": "0x462e91ec" }, { "constant": true, "inputs": [], "name": "dupVote", "outputs": [{ "name": "", "type": "bool", "value": false }], "payable": false, "stateMutability": "view", "type": "function", "signature": "0xecc76d4b" }, { "constant": true, "inputs": [], "name": "getNumOfCandidate", "outputs": [{ "name": "", "type": "uint8", "value": "0" }], "payable": false, "stateMutability": "view", "type": "function", "signature": "0xf4fc4b1f" }, { "constant": false, "inputs": [{ "name": "name", "type": "string" }], "name": "vote", "outputs": [], "payable": false, "stateMutability": "nonpayable", "type": "function", "signature": "0xfc36e15b" }, { "constant": true, "inputs": [{ "name": "name", "type": "string" }], "name": "getScoreOfCandidate", "outputs": [{ "name": "", "type": "uint256", "value": "0" }], "payable": false, "stateMutability": "view", "type": "function", "signature": "0xfd090896" }, { "inputs": [], "payable": false, "stateMutability": "nonpayable", "type": "constructor", "signature": "constructor" }, { "anonymous": false, "inputs": [{ "indexed": false, "name": "msg", "type": "string" }], "name": "sendMsg", "type": "event", "signature": "0x9e024820befa21e718899c73d1a2becabd2ed45d91807efb23f5a7afef64533b" }, { "anonymous": false, "inputs": [{ "indexed": false, "name": "state", "type": "bool" }], "name": "regiSuccess", "type": "event", "signature": "0xdadbf2ea1fe6dc4fe679073343f565bc04c7af4bad73419ae475d6a98bed2a11" }]
+const conAddress = '0xA22688836320ae0cC55cb705D4274f052c54FF4d'
+const contract = rpc.eth.contract(conInterface).at(conAddress)
+console.log('후보자의 총수', contract.getNumOfCandidate())
+const event = contract.sendMsg()
+
+// 서버 소켓 생성
+const io = require('socket.io')(server)
+io.on('connection', (socket) => {
+  //이벤트 감지
+  event.watch((err, msg) => {
+    socket.emit('c_send_error', msg)
+  })
+  socket.on('s_send_allAccounts', () => {
+    //계좌 정보 획득 및 잔액 조회 후 응답 데이터 구성
+    console.log('계좌 정보 요청이 들어왔다')
+    // 0. 응답 데이터 그릇:(배열)
+    let results = []
+    // 1. 계좌 리스트를 받는다.
+    let accounts = rpc.eth.accounts
+    // 2. 계좌를 하나씩 꺼낸다.
+    for (idx in accounts) {
+      let name = 'Account-' + (parseInt(idx) + 1) // 계좌 별칭
+      let id = accounts[idx]      // 계좌 주소(해시 값)
+      let coin = rpc.fromWei(rpc.eth.getBalance(id), 'ether') // 잔액
+      // 개별 데이터를 객체에 담아서 한묶음으로 구성
+      let tmp = {
+        name: name,
+        id: id,
+        coin: coin
+      }
+      // 응답 데이터 그릇에 추가
+      results.push(tmp)
+    }
+    socket.emit('c_send_allAccounts', results)
+  })
+
+  socket.on('s_send_addCandidate', (account, coin, name, pwd) => {
+
+    // 사용자의 잔액에서 gas비용을 뺀것이 0보다 작으면 => 돈이 부족하면, 불가
+    const gas = 2000000 //wei 단위
+    //현재 사용자의 잔고는 ether이므로, ether를 wei로 변경하여 비교해야한다.
+    const myWei = rpc.toWei(coin, 'ether')
+    console.log(myWei)
+    if (myWei - gas < 0) {
+      socket.emit('c_send_error', '잔액 부족')
+      return
+    }
+    //console.log(account,pwd)
+    //트랜잭션 발생(상태변수를 수정하는 작업을 진행하면) => gas 지급 => 계좌언락
+    try {
+      //console.log(account,pwd,rpc.personal.unlockAccount(account, pwd))
+      if (rpc.personal.unlockAccount(account, pwd)) {
+        const transaction = {
+          from: account,
+          gas: gas
+        }
+        //원래 함수의 인자를 모두 채우면, 그 다음부터 트랜잭션, 
+        contract.addCandidate(name, transaction, (err, suc) => {
+          socket.emit('c_send_error', err ? err : `등록성공, 잠시후에 확인하세요:${suc}`)
+        })
+      }
+    }
+    catch (error) {
+      console.log(error)
+      socket.emit('c_send_error', '비밀번호 오류, 다시 확인해서 시도하시오')
+    }
+  })
+
+  socket.on('s_send_candidateInfo', () => {
+    let nums = parseInt(contract.getNumOfCandidate())
+    // console.log(nums)
+    let results = []
+    for (let i = 0; i < nums; i++) {
+      let name = contract.getCandidateName(i) // 후보 이름
+      let info = {
+        name: name,
+        score: contract.getScoreOfCandidate(name) // 후보자별 득표수
+      }
+      // 후보자 1개 데이터를 배열에 담는다
+      results.push(info)
+    }
+    //console.log(results)
+    // 클라이언트로 보낸다
+    socket.emit('c_send_candidateInfo', results)
+  })
+
+  // 투표
+  socket.on('s_send_vote', (account, candidate) => {
+    // 투표 계좌 지정
+    console.log(account, candidate)
+    rpc.eth.defaultAccount = account
+    console.log(contract.dupVote())
+    if (contract.dupVote()) {
+      socket.emit('c_send_error', '이미 투표를 하였습니다.')
+    } else {
+      // 공간을 차지하는 작업은 아니므로, gas 지급은 안한다.
+      // 그러나, 값을 바꾸는 것 자체는 트렌젝션이므로 트렌젝션 처리는 수행된다.
+      if (rpc.personal.unlockAccount(account, '1234')) {
+        const transaction = {
+          from: account,
+          gas: 2000000
+        }
+        contract.vote(candidate, transaction, (err, result) => {
+        socket.emit('c_send_error', `투표 완료:${result}`)
+      })
+    }
+  }
+
+  })
+
+})
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
